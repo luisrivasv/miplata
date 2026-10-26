@@ -5,7 +5,6 @@ create table if not exists public.personal_app_state (
   updated_at timestamptz not null default now()
 );
 alter table public.personal_app_state enable row level security;
-drop policy if exists "users manage own app state" on public.personal_app_state;
 create policy "users manage own app state"
 on public.personal_app_state for all to authenticated
 using (user_id = (select auth.uid()))
@@ -18,7 +17,6 @@ create table if not exists public.household_app_state (
   updated_at timestamptz not null default now()
 );
 alter table public.household_app_state enable row level security;
-drop policy if exists "members manage household app state" on public.household_app_state;
 create policy "members manage household app state"
 on public.household_app_state for all to authenticated
 using (public.is_household_member(household_id))
