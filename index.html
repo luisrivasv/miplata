@@ -23,7 +23,9 @@
 .auth-card h2{margin-bottom:6px}.auth-card p{font-size:13px;color:var(--muted)}
 .auth-card .form{margin-top:18px}.auth-error{color:#a94b32;font-size:13px;white-space:pre-wrap}.auth-status{font-size:12px;color:var(--muted);margin-top:10px}
 
+.version-label{margin-left:auto;font-size:10px;border:1px solid #7b9a8e;padding:5px 8px;border-radius:20px;color:#d7f0c4;white-space:nowrap}
 .profile-button{width:42px;height:42px;flex:0 0 42px;border:1px solid #7b9a8e;border-radius:50%;background:#245347;color:#fff;font-size:20px;display:grid;place-items:center;padding:0}
+@media(max-width:420px){.version-label{display:none}.brand{gap:9px}.profile-button{margin-left:auto}}
 .profile-button:focus-visible,.account-card button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
 .account-overlay{position:fixed;inset:0;z-index:9998;background:#10251a80;display:none;place-items:center;padding:16px;overflow:auto}
 .account-overlay.open{display:grid}
@@ -38,7 +40,7 @@
 .account-email{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 
 </style></head><body><div class="app">
-<header><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub">Tus finanzas, más claras.</div></div><span style="margin-left:auto;font-size:10px;border:1px solid #7b9a8e;padding:5px 8px;border-radius:20px;color:#d7f0c4">VERSIÓN INICIAL</span><button id="accountButton" class="profile-button" type="button" aria-label="Abrir Mi cuenta" title="Mi cuenta"><span id="profileInitial">👤</span></button></div>
+<header><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub">Tus finanzas, más claras.</div></div><span class="version-label">VERSIÓN INICIAL</span><button id="accountButton" class="profile-button" type="button" aria-label="Abrir Mi cuenta" title="Mi cuenta"><span id="profileInitial">👤</span></button></div>
 <div class="eyebrow">Hola 👋 Este es tu resumen personal</div><div class="balance"><div class="balance-label">Saldo disponible</div><div class="money" id="balance">$485.000</div><div class="hint">Datos ficticios para probar la interfaz.</div><div class="reserve"><span>Ahorro familiar reservado</span><strong id="reserved">$450.000</strong></div></div>
 <div class="actions"><button class="action" id="addExpense">＋ Agregar gasto</button><button class="action secondary" id="addIncome">↙ Agregar ingreso</button></div></header>
 <main><p class="section-label">MENÚ PRINCIPAL</p><nav class="nav" aria-label="Secciones">
@@ -249,5 +251,12 @@ $('authForm').onsubmit=async e=>{
 supabase.auth.onAuthStateChange(async(event,session)=>{
   if(session?.user&&!user){user=session.user;await loadCloud()}
   else if(!session?.user&&user){user=null;householdId=null;closeAccount();if(!document.body.contains(overlay))document.body.appendChild(overlay);overlay.style.display='grid'}
+  if(event==='PASSWORD_RECOVERY'&&session?.user){
+    user=session.user;
+    if(document.body.contains(overlay)){overlay.remove();overlay.style.display='none'}
+    openAccount();
+    accountMessage('passwordMessage','Ingresa y confirma tu nueva contraseña para completar la recuperación.');
+    $('newPassword').focus();
+  }
 });
 </script></body></html>
