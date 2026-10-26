@@ -1,4 +1,4 @@
-const CACHE = "miplata-v8";
+const CACHE = "miplata-v9";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg", "./apple-touch-icon.svg"];
 self.addEventListener("install", event => event.waitUntil((async () => {
   const cache = await caches.open(CACHE);
