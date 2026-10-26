@@ -3,6 +3,7 @@
   "short_name": "MiPlata",
   "description": "Organiza tus cuentas, tarjetas, próximos pagos y ahorro familiar.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f6f7f3",
   "theme_color": "#173d35",
@@ -12,7 +13,13 @@
       "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
