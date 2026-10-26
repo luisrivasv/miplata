@@ -22,7 +22,7 @@ create or replace function public.create_household_invite()
 returns text
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_user uuid := auth.uid();
@@ -54,7 +54,7 @@ create or replace function public.accept_household_invite(p_token text)
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_user uuid := auth.uid();
