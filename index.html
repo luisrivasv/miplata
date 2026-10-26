@@ -123,14 +123,22 @@ async function loadCloud(){
 }
 async function saveCloud(){
   if(!user||loadingCloud)return;
+  const note=document.querySelector('.bottom-note');
+  if(note)note.textContent='MiPlata · Guardando cambios…';
   const all=window.miplataGetState();
   const personal={balance:Number(all.balance||0),transactions:all.transactions||[],cards:all.cards||[],payments:all.payments||[]};
   const family={goal:Number(all.goal||0),saved:Number(all.saved||0)};
-  const {error}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:personal,updated_at:new Date().toISOString()});
-  if(error){console.error(error);return}
-  if(householdId){
-    const {error:familyError}=await supabase.from('household_app_state').upsert({household_id:householdId,data:family,updated_at:new Date().toISOString()});
-    if(familyError)console.error(familyError);
+  try{
+    const {error}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:personal,updated_at:new Date().toISOString()});
+    if(error)throw error;
+    if(householdId){
+      const {error:familyError}=await supabase.from('household_app_state').upsert({household_id:householdId,data:family,updated_at:new Date().toISOString()});
+      if(familyError)throw familyError;
+    }
+    if(note)note.textContent='MiPlata · Cambios guardados en la nube';
+  }catch(error){
+    console.error('MiPlata: error guardando en la nube',error);
+    if(note)note.textContent='MiPlata · ERROR al guardar: '+(error.message||'revisa la conexión');
   }
 }
 window.addEventListener('miplata-state-changed',()=>{
