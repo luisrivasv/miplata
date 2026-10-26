@@ -17,6 +17,11 @@
 .panel{border:1px solid var(--line);border-radius:17px;padding:14px;margin:10px 0;background:#fff}.notice{background:#f4f5f0;border-radius:15px;padding:14px;font-size:13px;color:var(--muted);margin-top:16px}.tag{display:inline-block;font-size:11px;border-radius:100px;padding:4px 8px;background:#eef0f4;color:#394a61}
 .form{display:grid;gap:10px;margin-top:14px}.form label{font-size:12px;color:var(--muted);font-weight:650}.form input,.form select{width:100%;border:1px solid #d6dfd8;border-radius:11px;padding:12px;background:#fff;color:var(--ink)}.primary{background:var(--forest);color:white;border:0;border-radius:12px;padding:12px 15px;font-weight:700}.outline{background:white;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:650;color:var(--green)}.hidden{display:none!important}.progress{height:8px;background:#d1dfcc;border-radius:99px;overflow:hidden;margin:8px 0}.progress span{display:block;height:100%;background:#43825d}.goalbox{background:#edf5e9;border-radius:18px;padding:17px}.bottom-note{text-align:center;font-size:11px;color:var(--muted);padding:18px 0 4px}
 @media(min-width:600px){header{padding:26px 26px 20px}main{padding:24px}.nav{grid-template-columns:repeat(4,1fr)}.nav button{min-height:110px}.money{font-size:36px}}
+
+.auth-overlay{position:fixed;inset:0;z-index:9999;background:#f6f7f3;display:grid;place-items:center;padding:18px;overflow:auto}
+.auth-card{width:min(100%,440px);background:#fff;border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 15px 50px #10251a12}
+.auth-card h2{margin-bottom:6px}.auth-card p{font-size:13px;color:var(--muted)}
+.auth-card .form{margin-top:18px}.auth-error{color:#a94b32;font-size:13px;white-space:pre-wrap}.auth-status{font-size:12px;color:var(--muted);margin-top:10px}
 </style></head><body><div class="app">
 <header><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub">Tus finanzas, más claras.</div></div><span style="margin-left:auto;font-size:10px;border:1px solid #7b9a8e;padding:5px 8px;border-radius:20px;color:#d7f0c4">VERSIÓN INICIAL</span></div>
 <div class="eyebrow">Hola 👋 Este es tu resumen personal</div><div class="balance"><div class="balance-label">Saldo disponible</div><div class="money" id="balance">$485.000</div><div class="hint">Datos ficticios para probar la interfaz.</div><div class="reserve"><span>Ahorro familiar reservado</span><strong id="reserved">$450.000</strong></div></div>
@@ -38,7 +43,7 @@ if(!Array.isArray(state.cards))state.cards=[];
 // Retira las tarjetas de ejemplo de versiones anteriores, sin borrar las tarjetas agregadas por el usuario.
 state.cards=state.cards.filter(c=>!((c.name==='Itaú'&&Number(c.balance)===320000)||(c.name==='SBpay'&&Number(c.balance)===86500)||(c.name==='MACH'&&Number(c.balance)===42000)));
 const content=document.querySelector('#content');
-function persist(){localStorage.setItem('miplata-demo-state',JSON.stringify(state))}
+function persist(){localStorage.setItem('miplata-demo-state',JSON.stringify(state));window.dispatchEvent(new CustomEvent('miplata-state-changed'));}
 function dateLabel(s){if(!s)return 'Fecha por confirmar';return new Date(s+'T12:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'short'}).replace('.','')}
 function updateHeader(){document.querySelector('#balance').textContent=CLP(state.balance);document.querySelector('#reserved').textContent=CLP(state.saved)}
 function navActive(){document.querySelectorAll('[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===state.active))}
@@ -63,5 +68,90 @@ document.querySelectorAll('[data-section]').forEach(b=>b.addEventListener('click
 function openMovement(type){document.querySelector('#movementPanel').classList.remove('hidden');document.querySelector('#movementType').value=type;document.querySelector('#movementHeading').textContent=type==='Ingreso'?'Agregar ingreso':'Agregar movimiento';document.querySelector('#movementPanel').scrollIntoView({behavior:'smooth',block:'start'})}
 document.querySelector('#addExpense').onclick=()=>openMovement('Gasto');document.querySelector('#addIncome').onclick=()=>openMovement('Ingreso');document.querySelector('#closeMovement').onclick=()=>document.querySelector('#movementPanel').classList.add('hidden');
 document.querySelector('#movementForm').onsubmit=e=>{e.preventDefault();let type=document.querySelector('#movementType').value,amount=Number(document.querySelector('#movementAmount').value),desc=document.querySelector('#movementDescription').value.trim();if(type!=='Transferencia entre mis cuentas'){let signed=type==='Ingreso'?amount:-amount;state.balance+=signed;state.transactions.unshift({description:desc,category:type+' · Hoy',amount:signed})}else state.transactions.unshift({description:desc||'Transferencia propia',category:'Transferencia interna · No cambia el saldo total',amount:0});e.target.reset();document.querySelector('#movementPanel').classList.add('hidden');state.active='home';render()};
+window.miplataGetState=()=>JSON.parse(JSON.stringify(state));
+window.miplataSetState=(next)=>{state={...initial,...next,active:state.active||'home'};if(!Array.isArray(state.transactions))state.transactions=[];if(!Array.isArray(state.cards))state.cards=[];if(!Array.isArray(state.payments))state.payments=[];render()};
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./service-worker.js').catch(()=>{});render();
+</script>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = 'https://ktyzuvsfpkoapzzsbdba.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2VeYA1ALu1jAY5h3h4yKxQ_O8YbaIio';
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const overlay = document.createElement('div');
+overlay.className='auth-overlay';
+overlay.innerHTML = `<section class="auth-card"><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub" style="color:var(--muted)">Tus finanzas, más claras.</div></div></div><h2 id="authTitle" style="margin-top:22px">Tus finanzas, protegidas</h2><p id="authIntro">Inicia sesión para cargar tus datos personales desde la nube.</p><form class="form" id="authForm"><label for="authEmail">Correo electrónico</label><input id="authEmail" type="email" autocomplete="email" required placeholder="tu@correo.cl"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo 8 caracteres"><button class="primary" id="authSubmit" type="submit">Iniciar sesión</button></form><button class="outline" id="authToggle" style="width:100%;margin-top:10px">Crear una cuenta nueva</button><p class="auth-error" id="authError" role="alert"></p><p class="auth-status" id="authStatus">Conexión cifrada con Supabase. No ingreses información financiera hasta completar las pruebas.</p></section>`;
+document.body.appendChild(overlay);
+let mode='login', loadingCloud=false, saveTimer=null, user=null, householdId=null, familyState={goal:0,saved:0};
+const $=id=>document.getElementById(id);
+$('authToggle').onclick=()=>{mode=mode==='login'?'signup':'login';$('authTitle').textContent=mode==='login'?'Tus finanzas, protegidas':'Crear tu cuenta MiPlata';$('authIntro').textContent=mode==='login'?'Inicia sesión para cargar tus datos personales desde la nube.':'Regístrate con tu correo para guardar tus datos de forma privada.';$('authSubmit').textContent=mode==='login'?'Iniciar sesión':'Crear cuenta';$('authToggle').textContent=mode==='login'?'Crear una cuenta nueva':'Ya tengo cuenta';$('authError').textContent='';$('authPassword').setAttribute('autocomplete',mode==='login'?'current-password':'new-password')};
+function showError(msg){$('authError').textContent=msg}
+async function ensureHousehold(){
+  const {data: memberships,error}=await supabase.from('household_members').select('household_id,role').eq('user_id',user.id).limit(1);
+  if(error) throw error;
+  if(memberships?.length){householdId=memberships[0].household_id;return}
+  const {data,error:createError}=await supabase.rpc('create_household',{household_name:'Mi hogar'});
+  if(createError) throw createError;
+  householdId=data;
+}
+async function loadCloud(){
+  loadingCloud=true;
+  try{
+    const {data:personal,error}=await supabase.from('personal_app_state').select('data').eq('user_id',user.id).maybeSingle();
+    if(error) throw error;
+    let next=personal?.data;
+    if(!next){
+      next={balance:0,active:'home',transactions:[],cards:[],payments:[],goal:0,saved:0};
+      const {error:saveError}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:{balance:0,transactions:[],cards:[],payments:[]},updated_at:new Date().toISOString()});
+      if(saveError) throw saveError;
+    }
+    await ensureHousehold();
+    const {data:family,error:familyError}=await supabase.from('household_app_state').select('data').eq('household_id',householdId).maybeSingle();
+    if(familyError) throw familyError;
+    if(family?.data){familyState=family.data}else{
+      familyState={goal:0,saved:0};
+      const {error:familySaveError}=await supabase.from('household_app_state').upsert({household_id:householdId,data:familyState,updated_at:new Date().toISOString()});
+      if(familySaveError) throw familySaveError;
+    }
+    window.miplataSetState({...next,...familyState,active:'home'});
+    overlay.remove();
+    $('balance')?.setAttribute('aria-label','Saldo sincronizado en la nube');
+    const note=document.querySelector('.bottom-note');if(note)note.textContent='MiPlata · Sincronización en nube activa';
+    const hint=document.querySelector('.hint');if(hint)hint.textContent='Tus datos personales se guardan en tu cuenta.';
+    const reserve=document.querySelector('.notice');if(reserve)reserve.innerHTML='🔒 <strong>Datos protegidos</strong><br>Tus finanzas personales se guardan por separado de los datos compartidos del hogar.';
+  }catch(e){showError('No pudimos cargar los datos desde la nube. Revisa que hayas ejecutado el SQL de configuración adicional. Detalle: '+(e.message||e));}
+  finally{loadingCloud=false}
+}
+async function saveCloud(){
+  if(!user||loadingCloud)return;
+  const all=window.miplataGetState();
+  const personal={balance:Number(all.balance||0),transactions:all.transactions||[],cards:all.cards||[],payments:all.payments||[]};
+  const family={goal:Number(all.goal||0),saved:Number(all.saved||0)};
+  const {error}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:personal,updated_at:new Date().toISOString()});
+  if(error){console.error(error);return}
+  if(householdId){
+    const {error:familyError}=await supabase.from('household_app_state').upsert({household_id:householdId,data:family,updated_at:new Date().toISOString()});
+    if(familyError)console.error(familyError);
+  }
+}
+window.addEventListener('miplata-state-changed',()=>{
+  if(!user||loadingCloud)return;
+  clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveCloud(),500);
+});
+$('authForm').onsubmit=async e=>{
+  e.preventDefault();$('authSubmit').disabled=true;showError('');$('authStatus').textContent='Conectando con Supabase…';
+  const email=$('authEmail').value.trim(),password=$('authPassword').value;
+  try{
+    let result;
+    if(mode==='signup') result=await supabase.auth.signUp({email,password,options:{emailRedirectTo:'https://luisrivasv.github.io/miplata/'}});
+    else result=await supabase.auth.signInWithPassword({email,password});
+    if(result.error)throw result.error;
+    if(mode==='signup'&&!result.data.session){$('authStatus').textContent='Cuenta creada. Revisa tu correo y confirma la dirección antes de iniciar sesión.';return}
+    user=result.data.user;
+    await loadCloud();
+  }catch(err){showError(err.message||'Error de autenticación');$('authStatus').textContent='No se pudo completar el acceso.'}
+  finally{$('authSubmit').disabled=false}
+};
+supabase.auth.onAuthStateChange(async(event,session)=>{
+  if(session?.user&&!user){user=session.user;await loadCloud()}
+});
 </script></body></html>
