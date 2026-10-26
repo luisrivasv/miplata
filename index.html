@@ -22,8 +22,23 @@
 .auth-card{width:min(100%,440px);background:#fff;border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 15px 50px #10251a12}
 .auth-card h2{margin-bottom:6px}.auth-card p{font-size:13px;color:var(--muted)}
 .auth-card .form{margin-top:18px}.auth-error{color:#a94b32;font-size:13px;white-space:pre-wrap}.auth-status{font-size:12px;color:var(--muted);margin-top:10px}
+
+.profile-button{width:42px;height:42px;flex:0 0 42px;border:1px solid #7b9a8e;border-radius:50%;background:#245347;color:#fff;font-size:20px;display:grid;place-items:center;padding:0}
+.profile-button:focus-visible,.account-card button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+.account-overlay{position:fixed;inset:0;z-index:9998;background:#10251a80;display:none;place-items:center;padding:16px;overflow:auto}
+.account-overlay.open{display:grid}
+.account-card{width:min(100%,460px);max-height:92vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 15px 50px #10251a20}
+.account-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.account-close{border:0;background:#f0f3ef;border-radius:50%;width:38px;height:38px;font-size:20px;color:var(--ink)}
+.account-section{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+.account-card .form{margin-top:12px}
+.account-card .form input{width:100%;border:1px solid #d6dfd8;border-radius:11px;padding:12px;background:#fff;color:var(--ink)}
+.account-message{font-size:13px;color:var(--green);white-space:pre-wrap;margin-top:8px}
+.account-error{font-size:13px;color:var(--red);white-space:pre-wrap;margin-top:8px}
+.account-email{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+
 </style></head><body><div class="app">
-<header><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub">Tus finanzas, más claras.</div></div><span style="margin-left:auto;font-size:10px;border:1px solid #7b9a8e;padding:5px 8px;border-radius:20px;color:#d7f0c4">VERSIÓN INICIAL</span></div>
+<header><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub">Tus finanzas, más claras.</div></div><span style="margin-left:auto;font-size:10px;border:1px solid #7b9a8e;padding:5px 8px;border-radius:20px;color:#d7f0c4">VERSIÓN INICIAL</span><button id="accountButton" class="profile-button" type="button" aria-label="Abrir Mi cuenta" title="Mi cuenta"><span id="profileInitial">👤</span></button></div>
 <div class="eyebrow">Hola 👋 Este es tu resumen personal</div><div class="balance"><div class="balance-label">Saldo disponible</div><div class="money" id="balance">$485.000</div><div class="hint">Datos ficticios para probar la interfaz.</div><div class="reserve"><span>Ahorro familiar reservado</span><strong id="reserved">$450.000</strong></div></div>
 <div class="actions"><button class="action" id="addExpense">＋ Agregar gasto</button><button class="action secondary" id="addIncome">↙ Agregar ingreso</button></div></header>
 <main><p class="section-label">MENÚ PRINCIPAL</p><nav class="nav" aria-label="Secciones">
@@ -81,9 +96,79 @@ const overlay = document.createElement('div');
 overlay.className='auth-overlay';
 overlay.innerHTML = `<section class="auth-card"><div class="brand"><div class="logo">◈</div><div><h1>MiPlata</h1><div class="sub" style="color:var(--muted)">Tus finanzas, más claras.</div></div></div><h2 id="authTitle" style="margin-top:22px">Tus finanzas, protegidas</h2><p id="authIntro">Inicia sesión para cargar tus datos personales desde la nube.</p><form class="form" id="authForm"><label for="authEmail">Correo electrónico</label><input id="authEmail" type="email" autocomplete="email" required placeholder="tu@correo.cl"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo 8 caracteres"><button class="primary" id="authSubmit" type="submit">Iniciar sesión</button></form><button class="outline" id="authToggle" style="width:100%;margin-top:10px">Crear una cuenta nueva</button><p class="auth-error" id="authError" role="alert"></p><p class="auth-status" id="authStatus">Conexión cifrada con Supabase. No ingreses información financiera hasta completar las pruebas.</p></section>`;
 document.body.appendChild(overlay);
+const accountOverlay=document.createElement('div');
+accountOverlay.className='account-overlay';
+accountOverlay.id='accountOverlay';
+accountOverlay.innerHTML=`<section class="account-card" role="dialog" aria-modal="true" aria-labelledby="accountTitle"><div class="account-head"><div><h2 id="accountTitle">Mi cuenta</h2><p class="muted">Tu perfil y la seguridad de tu acceso.</p></div><button type="button" class="account-close" id="accountClose" aria-label="Cerrar">×</button></div>
+<div class="account-section" style="border-top:0;padding-top:4px;margin-top:4px"><h3>Perfil</h3><p class="account-email" id="accountEmail">Cargando correo…</p><form class="form" id="profileForm"><label for="profileName">Nombre para mostrar</label><input id="profileName" maxlength="60" placeholder="¿Cómo te llamamos?"><button class="primary" type="submit">Guardar nombre</button></form><p class="account-message" id="profileMessage" role="status"></p><p class="account-error" id="profileError" role="alert"></p></div>
+<div class="account-section"><h3>Seguridad</h3><form class="form" id="passwordForm"><label for="newPassword">Nueva contraseña</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required><label for="confirmPassword">Repite la nueva contraseña</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Confirma la contraseña" required><button class="primary" type="submit">Cambiar contraseña</button></form><p class="account-message" id="passwordMessage" role="status"></p><p class="account-error" id="passwordError" role="alert"></p><button type="button" class="outline" id="resetPasswordButton" style="width:100%;margin-top:8px">Enviar correo de recuperación</button><p class="account-message" id="resetMessage" role="status"></p><p class="account-error" id="resetError" role="alert"></p></div>
+<div class="account-section"><h3>Sesión</h3><p class="muted">Cierra tu sesión en este dispositivo. Tus datos guardados en la nube no se eliminan.</p><button type="button" class="outline" id="signOutButton" style="width:100%">Cerrar sesión</button><p class="account-error" id="signOutError" role="alert"></p></div>
+<p class="muted" style="margin-bottom:0">La foto de perfil y las preferencias estarán disponibles en una próxima mejora.</p></section>`;
+document.body.appendChild(accountOverlay);
 let mode='login', loadingCloud=false, saveTimer=null, user=null, householdId=null, familyState={goal:0,saved:0};
 const $=id=>document.getElementById(id);
 $('authToggle').onclick=()=>{mode=mode==='login'?'signup':'login';$('authTitle').textContent=mode==='login'?'Tus finanzas, protegidas':'Crear tu cuenta MiPlata';$('authIntro').textContent=mode==='login'?'Inicia sesión para cargar tus datos personales desde la nube.':'Regístrate con tu correo para guardar tus datos de forma privada.';$('authSubmit').textContent=mode==='login'?'Iniciar sesión':'Crear cuenta';$('authToggle').textContent=mode==='login'?'Crear una cuenta nueva':'Ya tengo cuenta';$('authError').textContent='';$('authPassword').setAttribute('autocomplete',mode==='login'?'current-password':'new-password')};
+
+function accountMessage(id,msg){$(id).textContent=msg||''}
+function clearAccountMessages(){['profileMessage','profileError','passwordMessage','passwordError','resetMessage','resetError','signOutError'].forEach(id=>accountMessage(id,''))}
+function refreshAccount(){
+  if(!user)return;
+  const email=user.email||'Correo no disponible';
+  $('accountEmail').textContent=email;
+  $('profileName').value=user.user_metadata?.display_name||'';
+  const name=(user.user_metadata?.display_name||email.split('@')[0]||'U').trim();
+  $('profileInitial').textContent=name.charAt(0).toLocaleUpperCase('es-CL');
+}
+function openAccount(){if(!user)return;clearAccountMessages();refreshAccount();accountOverlay.classList.add('open')}
+function closeAccount(){accountOverlay.classList.remove('open')}
+$('accountButton').addEventListener('click',openAccount);
+$('accountClose').addEventListener('click',closeAccount);
+accountOverlay.addEventListener('click',e=>{if(e.target===accountOverlay)closeAccount()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAccount()});
+$('profileForm').onsubmit=async e=>{
+  e.preventDefault();accountMessage('profileMessage','');accountMessage('profileError','');
+  const display_name=$('profileName').value.trim();
+  try{
+    const {data,error}=await supabase.auth.updateUser({data:{display_name}});
+    if(error)throw error;
+    user=data.user||user;refreshAccount();accountMessage('profileMessage','Nombre de perfil actualizado.');
+  }catch(err){accountMessage('profileError',err.message||'No se pudo actualizar el perfil.')}
+};
+$('passwordForm').onsubmit=async e=>{
+  e.preventDefault();accountMessage('passwordMessage','');accountMessage('passwordError','');
+  const password=$('newPassword').value,confirm=$('confirmPassword').value;
+  if(password.length<8){accountMessage('passwordError','La contraseña debe tener al menos 8 caracteres.');return}
+  if(password!==confirm){accountMessage('passwordError','Las contraseñas no coinciden.');return}
+  try{
+    const {error}=await supabase.auth.updateUser({password});
+    if(error)throw error;
+    $('passwordForm').reset();accountMessage('passwordMessage','Contraseña actualizada correctamente.');
+  }catch(err){accountMessage('passwordError',err.message||'No se pudo cambiar la contraseña.')}
+};
+$('resetPasswordButton').onclick=async()=>{
+  accountMessage('resetMessage','');accountMessage('resetError','');
+  if(!user?.email){accountMessage('resetError','No encontramos un correo asociado a esta cuenta.');return}
+  try{
+    const {error}=await supabase.auth.resetPasswordForEmail(user.email,{redirectTo:'https://luisrivasv.github.io/miplata/'});
+    if(error)throw error;
+    accountMessage('resetMessage','Enviamos un correo de recuperación a '+user.email+'. Revisa también la carpeta de spam.');
+  }catch(err){accountMessage('resetError',err.message||'No se pudo enviar el correo de recuperación.')}
+};
+$('signOutButton').onclick=async()=>{
+  accountMessage('signOutError','');
+  try{
+    const {error}=await supabase.auth.signOut();
+    if(error)throw error;
+    closeAccount();user=null;householdId=null;
+    if(!document.body.contains(overlay))document.body.appendChild(overlay);
+    overlay.style.display='grid';
+    $('authStatus').textContent='Has cerrado sesión. Inicia sesión para volver a tus datos.';
+    $('authError').textContent='';
+    $('authPassword').value='';
+    document.querySelector('.bottom-note').textContent='MiPlata · Sesión cerrada';
+  }catch(err){accountMessage('signOutError',err.message||'No se pudo cerrar la sesión.')}
+};
+
 function showError(msg){$('authError').textContent=msg}
 async function ensureHousehold(){
   const {data: memberships,error}=await supabase.from('household_members').select('household_id,role').eq('user_id',user.id).limit(1);
@@ -114,6 +199,8 @@ async function loadCloud(){
     }
     window.miplataSetState({...next,...familyState,active:'home'});
     overlay.remove();
+    overlay.style.display='none';
+    refreshAccount();
     $('balance')?.setAttribute('aria-label','Saldo sincronizado en la nube');
     const note=document.querySelector('.bottom-note');if(note)note.textContent='MiPlata · Sincronización en nube activa';
     const hint=document.querySelector('.hint');if(hint)hint.textContent='Tus datos personales se guardan en tu cuenta.';
@@ -161,5 +248,6 @@ $('authForm').onsubmit=async e=>{
 };
 supabase.auth.onAuthStateChange(async(event,session)=>{
   if(session?.user&&!user){user=session.user;await loadCloud()}
+  else if(!session?.user&&user){user=null;householdId=null;closeAccount();if(!document.body.contains(overlay))document.body.appendChild(overlay);overlay.style.display='grid'}
 });
 </script></body></html>
