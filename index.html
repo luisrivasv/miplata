@@ -225,8 +225,8 @@ async function loadCloud(){
     if(error) throw error;
     let next=personal?.data;
     if(!next){
-      next={balance:0,active:'home',transactions:[],cards:[],payments:[],goal:0,saved:0};
-      const {error:saveError}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:{balance:0,transactions:[],cards:[],payments:[]},updated_at:new Date().toISOString()});
+      next={balance:0,active:'home',transactions:[],cards:[],payments:[],accounts:[],goal:0,saved:0};
+      const {error:saveError}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:{balance:0,transactions:[],cards:[],payments:[],accounts:[]},updated_at:new Date().toISOString()});
       if(saveError) throw saveError;
     }
     await ensureHousehold();
@@ -253,7 +253,7 @@ async function saveCloud(){
   const note=document.querySelector('.bottom-note');
   if(note)note.textContent='MiPlata · Guardando cambios…';
   const all=window.miplataGetState();
-  const personal={balance:Number(all.balance||0),transactions:all.transactions||[],cards:all.cards||[],payments:all.payments||[]};
+  const personal={balance:Number(all.balance||0),transactions:all.transactions||[],cards:all.cards||[],payments:all.payments||[],accounts:all.accounts||[]};
   const family={goal:Number(all.goal||0),saved:Number(all.saved||0)};
   try{
     const {error}=await supabase.from('personal_app_state').upsert({user_id:user.id,data:personal,updated_at:new Date().toISOString()});
