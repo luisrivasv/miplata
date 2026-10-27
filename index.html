@@ -67,7 +67,7 @@ function accountTotal(){return (state.accounts||[]).reduce((sum,a)=>sum+Number(a
 function availableBalance(){return state.accounts.length?accountTotal():Number(state.balance||0)}
 function monthKey(date=new Date()){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')}
 function paymentIsPaid(p,key=monthKey()){return Array.isArray(p.paidMonths)&&p.paidMonths.includes(key)}
-function currentPayments(){return state.payments.filter(p=>p.monthly!==false).map(p=>({...p,paid:paymentIsPaid(p)}))}
+function currentPayments(){const now=monthKey();return state.payments.filter(p=>{const dueMonth=(p.due||'').slice(0,7);return p.monthly===false?dueMonth===now:(!dueMonth||dueMonth<=now)}).map(p=>{const dueMonth=(p.due||'').slice(0,7);let due=p.due;if(p.monthly!==false&&dueMonth&&dueMonth<now){const day=Number(p.due.slice(8,10));const last=new Date(Number(now.slice(0,4)),Number(now.slice(5,7)),0).getDate();due=now+'-'+String(Math.min(day,last)).padStart(2,'0')}return {...p,due,paid:paymentIsPaid(p)}})}
 function updateHeader(){state.balance=availableBalance();document.querySelector('#balance').textContent=CLP(state.balance);document.querySelector('#reserved').textContent=CLP(state.saved)}
 function navActive(){document.querySelectorAll('[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===state.active))}
 function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
